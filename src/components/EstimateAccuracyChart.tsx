@@ -19,8 +19,8 @@ interface Props {
 export function EstimateAccuracyChart({ data }: Props) {
   const max = Math.max(10, ...data.map((d) => Math.max(d.estimated, d.actual)));
   const diagonal = [
-    { estimated: 0, actual: 0 },
-    { estimated: max, actual: max },
+    { x: 0, y: 0 },
+    { x: max, y: max },
   ];
 
   return (
@@ -70,9 +70,10 @@ export function EstimateAccuracyChart({ data }: Props) {
             }}
           />
           <ReferenceLine
-            segment={diagonal as unknown as [{ x: number; y: number }]}
+            segment={diagonal}
             stroke="#94a3b8"
             strokeDasharray="5 5"
+            ifOverflow="extendDomain"
           />
           <Scatter name="課題" data={data} fill="#a855f7" />
         </ScatterChart>
