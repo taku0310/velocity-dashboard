@@ -101,6 +101,7 @@ export function LoginForm({ onLogin, onMockMode, loading, error }: Props) {
 
         <div className="mt-6 pt-6 border-t border-slate-700">
           <button
+            type="button"
             onClick={onMockMode}
             className="w-full bg-slate-700 hover:bg-slate-600 py-2.5 rounded-lg font-medium transition flex items-center justify-center gap-2"
           >

@@ -31,7 +31,10 @@ export function useSprintData(options: UseSprintDataOptions): UseSprintDataResul
     let cancelled = false;
 
     const load = async () => {
-      setLoading(true);
+      // 既にデータがある場合は loading フラグを立てず、バックグラウンドで差し替える
+      // （ビューの瞬断・チャートのレイアウト崩れを防ぐ）
+      const hasExistingData = data !== null;
+      if (!hasExistingData) setLoading(true);
       setError(null);
       setUsingFallback(false);
 
@@ -75,6 +78,8 @@ export function useSprintData(options: UseSprintDataOptions): UseSprintDataResul
     return () => {
       cancelled = true;
     };
+    // data は依存に含めない（再ロードを引き起こすため）
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dataSource, credentials, fallbackToMock, reloadCounter]);
 
   return { data, loading, error, usingFallback, refetch };
