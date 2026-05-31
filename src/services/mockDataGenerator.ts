@@ -89,10 +89,17 @@ function generateIssues(
     const actualHours = isDone ? estimatedHours * accuracyVariance : estimatedHours * rand() * 0.7;
     const assignee = pick(rand, ASSIGNEES);
 
+    const total = endDate.getTime() - startDate.getTime();
+    const issueStartOffset = rand() * total * 0.6;
+    const issueStart = new Date(startDate.getTime() + issueStartOffset);
+    const issueDueOffset = issueStartOffset + (1 + rand() * 5) * 24 * 60 * 60 * 1000;
+    const issueDue = new Date(
+      Math.min(endDate.getTime(), startDate.getTime() + issueDueOffset),
+    );
+
     let completionDate: string | undefined;
     if (isDone) {
-      const total = endDate.getTime() - startDate.getTime();
-      const offset = rand() * total;
+      const offset = issueStartOffset + rand() * (total - issueStartOffset);
       completionDate = new Date(startDate.getTime() + offset).toISOString();
     }
 
@@ -115,6 +122,8 @@ function generateIssues(
       type: pick(rand, ISSUE_TYPES),
       priority: pick(rand, PRIORITIES),
       completionDate,
+      startDate: issueStart.toISOString(),
+      dueDate: issueDue.toISOString(),
       worklogs: generateWorklogs(rand, assignee, actualHours, startDate, endDate),
     });
   }

@@ -4,6 +4,7 @@ import type { Issue, IssueStatus } from '../types';
 
 interface Props {
   issues: Issue[];
+  onIssueClick?: (issue: Issue) => void;
 }
 
 function statusBadge(status: IssueStatus): string {
@@ -28,7 +29,7 @@ function accuracyValue(issue: Issue): number {
   );
 }
 
-export function IssuesTable({ issues }: Props) {
+export function IssuesTable({ issues, onIssueClick }: Props) {
   const [filter, setFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | IssueStatus>('all');
 
@@ -98,7 +99,13 @@ export function IssuesTable({ issues }: Props) {
             {filtered.map((issue) => {
               const acc = accuracyValue(issue);
               return (
-                <tr key={issue.id} className="border-b border-slate-800 hover:bg-slate-700/20">
+                <tr
+                  key={issue.id}
+                  onClick={() => onIssueClick?.(issue)}
+                  className={`border-b border-slate-800 hover:bg-slate-700/20 ${
+                    onIssueClick ? 'cursor-pointer' : ''
+                  }`}
+                >
                   <td className="py-2 px-2 font-mono text-xs text-blue-300">{issue.id}</td>
                   <td className="py-2 px-2 max-w-[280px] truncate">{issue.title}</td>
                   <td className="py-2 px-2 text-right">{issue.points}</td>

@@ -5,6 +5,7 @@ import { LoadingSpinner } from './components/LoadingSpinner';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { useJiraAuth } from './hooks/useJiraAuth';
 import { useSprintData } from './hooks/useSprintData';
+import { useDataset } from './hooks/useDataset';
 import type { DataSource } from './types';
 
 const envDataSource =
@@ -22,6 +23,8 @@ export default function App() {
     fallbackToMock: useMockFallback,
   });
 
+  const dataset = useDataset(sprintState.data);
+
   if (!auth.isAuthenticated) {
     return (
       <LoginForm
@@ -36,11 +39,11 @@ export default function App() {
     );
   }
 
-  if (sprintState.loading) {
+  if (sprintState.loading && dataset.sprints.length === 0) {
     return <LoadingSpinner message="スプリントデータを取得中…" />;
   }
 
-  if (!sprintState.data || sprintState.data.length === 0) {
+  if (dataset.sprints.length === 0) {
     return (
       <ErrorBoundary
         error={sprintState.error || 'スプリントデータが見つかりません'}
@@ -51,7 +54,16 @@ export default function App() {
 
   return (
     <Dashboard
-      sprints={sprintState.data}
+      sprints={dataset.sprints}
+      hasLocalEdits={dataset.hasLocalEdits}
+      onAddIssue={dataset.addIssue}
+      onUpdateIssue={dataset.updateIssue}
+      onDeleteIssue={dataset.deleteIssue}
+      onAddSprint={dataset.addSprint}
+      onUpdateSprint={dataset.updateSprint}
+      onDeleteSprint={dataset.deleteSprint}
+      onResetToSource={dataset.resetToSource}
+      onImportDataset={dataset.importDataset}
       onLogout={() => {
         setMockMode(false);
         auth.logout();
