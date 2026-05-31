@@ -31,6 +31,7 @@ export interface Issue {
   completionDate?: string;
   startDate?: string; // ガント表示用（着手日）
   dueDate?: string;   // ガント表示用（期限）
+  parentId?: string;  // 親課題 ID（階層化用）
   worklogs?: WorkLog[];
 }
 

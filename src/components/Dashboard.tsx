@@ -300,6 +300,9 @@ export function Dashboard(props: Props) {
               issues={filteredIssues}
               onIssueClick={(issue) => setEditingIssue({ issue, isNew: false })}
               onAdd={(status) => openNewIssue(status)}
+              onStatusChange={(issueId, newStatus) =>
+                onUpdateIssue(selectedSprint.id, issueId, { status: newStatus })
+              }
             />
             <BurndownChart data={filteredSprintView.burndown} />
           </div>
@@ -323,6 +326,9 @@ export function Dashboard(props: Props) {
           <GanttChart
             sprint={filteredSprintView}
             onIssueClick={(issue) => setEditingIssue({ issue, isNew: false })}
+            onSetParent={(childId, newParentId) =>
+              onUpdateIssue(selectedSprint.id, childId, { parentId: newParentId })
+            }
           />
         );
 
@@ -489,6 +495,8 @@ export function Dashboard(props: Props) {
         <IssueEditModal
           issue={editingIssue.issue}
           isNew={editingIssue.isNew}
+          assignees={allAssignees}
+          allIssues={selectedSprint.issues}
           onSave={(updated) => {
             onUpdateIssue(selectedSprint.id, editingIssue.issue.id, updated);
             setEditingIssue(null);
