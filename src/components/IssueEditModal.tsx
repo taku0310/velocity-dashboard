@@ -62,6 +62,7 @@ export function IssueEditModal({
   const [dueDate, setDueDate] = useState('');
   const [labelsStr, setLabelsStr] = useState('');
   const [parentId, setParentId] = useState<string>('');
+  const [epicId, setEpicId] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -85,16 +86,21 @@ export function IssueEditModal({
     setDueDate(toInputDate(issue.dueDate));
     setLabelsStr(issue.labels.join(', '));
     setParentId(issue.parentId || '');
+    setEpicId(issue.epicId || '');
     setError(null);
   }, [issue, assignees]);
 
   if (!issue) return null;
 
-  // 親候補: 自分自身と子孫を除く
+  // 親候補: 自分自身と子孫を除く / Epic は親候補から除外（Epic は別フィールドで指定）
   const parentCandidates = allIssues.filter((i) => {
     if (i.id === issue.id) return false;
+    if (i.type === 'Epic') return false;
     return canSetParent(allIssues, issue.id, i.id);
   });
+  // エピック候補: type === 'Epic' のもの。Epic 同士は紐付けない
+  const epicCandidates =
+    issue.type === 'Epic' ? [] : allIssues.filter((i) => i.type === 'Epic' && i.id !== issue.id);
 
   const handleAssigneeChange = (value: string) => {
     if (value === NEW_ASSIGNEE_VALUE) {
@@ -150,6 +156,7 @@ export function IssueEditModal({
         .map((l) => l.trim())
         .filter(Boolean),
       parentId: parentId || undefined,
+      epicId: issue.type === 'Epic' ? undefined : epicId || undefined,
     });
   };
 
@@ -334,14 +341,32 @@ export function IssueEditModal({
             </div>
           </div>
 
+          {issue.type !== 'Epic' && (
+            <div>
+              <label className="block text-sm text-slate-300 mb-1">エピック</label>
+              <select
+                value={epicId}
+                onChange={(e) => setEpicId(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:border-blue-500"
+              >
+                <option value="">なし</option>
+                {epicCandidates.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.id} — {c.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div>
-            <label className="block text-sm text-slate-300 mb-1">親課題</label>
+            <label className="block text-sm text-slate-300 mb-1">親課題（サブタスク化）</label>
             <select
               value={parentId}
               onChange={(e) => setParentId(e.target.value)}
               className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:border-blue-500"
             >
-              <option value="">なし（ルート）</option>
+              <option value="">なし</option>
               {parentCandidates.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.id} — {c.title}
