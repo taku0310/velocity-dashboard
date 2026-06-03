@@ -1,99 +1,137 @@
 # Roadmap — Velocity Dashboard
 
 作成者: Product Owner Agent
-最終更新: 2026-06-03
-ソース: `01-requirements.md` `03-ux_review.md` `feature_proposals.md`
+最終更新: 2026-06-03 (9 エージェント再設計反映)
 
 ## v0.x — 現在地
 
-完了済みのマイルストーン (commit `1a0003e` 時点):
+完了済み (commit `b87442e` 時点):
 
-- [x] サマリタブ（KPI / Velocity / バーンダウン / 担当者別 / 見積精度）
-- [x] 進捗タブ（エピック別 Kanban、DnD ステータス更新）
-- [x] ガントタブ（プロジェクト全体、階層 DnD、タイプバッジ）
-- [x] 課題管理タブ（エピック別グルーピング、全列ソート、全スプリント表示）
-- [x] レポートタブ（MD / CSV / JSON エクスポート）
-- [x] localStorage 永続化、JSON import
-- [x] ローカル CRUD（課題・スプリントの追加・編集・削除）
+- [x] 5 タブ構成（サマリ / 進捗 / ガント / 課題管理 / レポート）
+- [x] エピックスイムレーン (進捗)
+- [x] プロジェクト全体ガント + 階層 DnD + タイプバッジ
+- [x] エピック別グルーピング (課題管理)
+- [x] 全列ソート（担当者別 + 全課題一覧）
+- [x] 全 5 タブで Markdown / CSV / JSON エクスポート
+- [x] localStorage 永続化、JSON import / export
+- [x] ローカル CRUD（課題・スプリント）
 - [x] スプリント完了バッジ、完了スプリント非表示トグル
-
-**この時点で既に Jira の Free プランを 5 ジョブ中 3 つで上回っている。**
-
----
-
-## v1.0 — 「J1 / J2 / J4 で Jira を勝つ」
-
-目標: 個人とチームリードが朝に開いて **3 秒** で状況把握できる。
-
-### Sprint α (2 日)
-
-- [ ] **F-009**: あなたの今日のタスクセクション
-  - サマリタブ最上部、現在ユーザー特定（Jira email → assignee）
-  - モックモード用「私は誰？」プルダウン
-- [ ] **F-010 + F-011**: 停滞検出 + overload ハイライト
-  - 停滞バッジ（3 / 6 / 11 日の 3 段階）
-  - 担当者テーブルに `進行中件数` `未完了 pt` 列追加
-  - しきい値超過行を色分け
-
-### Sprint β (1 日)
-
-- [ ] **UX #2**: スプリントタブ圧縮
-  - アクティブスプリントのみハイライト、過去は折りたたみ
-- [ ] **UX #3**: フィルタバー視認性
-  - 適用中チップ表示、`/` でフォーカス
-- [ ] **F-012 (一部)**: 主要キーボードショートカット
-  - `/` 検索、`Esc` モーダル閉じ、`Cmd+K` パレット（次 sprint へ伸ばす可）
-
-### Sprint γ (1 日)
-
-- [ ] **Cmd+K グローバル検索** (UX #6)
-- [ ] **パーマリンク** (UX #7) — `#/issue/ECOM-1234`
-
-**v1.0 リリース条件**: 上記すべて + Reviewer Agent / QA Agent のサインオフ
+- [x] 9 エージェント組織と全成果物ドキュメント
 
 ---
 
-## v1.x — Polish
+## v1.0 — UX 4 基準完全制覇
 
-- [ ] UX #8: ガント「今日に移動」ボタン + 起動時スクロール初期化
-- [ ] UX #9: 編集モーダルの折りたたみ詳細化（または右サイドパネル化）
-- [ ] UX #10: ワークログ整理（自分・今週フィルタ）
-- [ ] UX #11-15: 軽微な点
-- [ ] **F-013**: Storybook（内部品質、外向け価値はないので低優先）
-- [ ] **F-014**: TanStack Query / Zustand（スケール時に検討、現状は不要）
+目標: J1〜J5 すべてで Jira を上回る。合計 ~10 日 (UX 4 日 + 内部 4 日 + バッファ)。
+
+### Sprint α — UX P0 (3 日)
+
+PR ベースで個別マージ。各 PR は AI PM ROI #1〜#3 に対応。
+
+- [ ] **PR-α1**: `lib/` フォルダ確立 + `staleness.ts` `overload.ts` `epic.ts` 新規 (0.3 日)
+- [ ] **PR-α2**: `MyTasksCard.tsx` 新規、サマリタブ最上部に配置 (F-009) (0.5 日)
+- [ ] **PR-α3**: `Badge` コンポーネント + 停滞 / overload / Review 滞留ハイライト (F-010 + F-011 + Analyst #3) (1.0 日)
+- [ ] **PR-α4**: エピック ETA 表示 (Analyst #1) — ProgressBoard / IssuesTable のエピックヘッダー拡張 (0.5 日)
+- [ ] **PR-α5**: 担当者テーブル拡張（進行中件数 / Review 滞留 / 未完了 pt 列、しきい値色分け） (0.7 日)
+
+### Sprint β — UX P1 (2 日)
+
+- [ ] **PR-β1**: `shared/components/Modal.tsx` 共通化 (focus trap, Esc) → 2 モーダルが乗り換え (Reviewer R-002) (0.5 日)
+- [ ] **PR-β2**: `useGlobalKeyboard` フック + `/` フォーカス, `Cmd+K`, `Esc` (0.3 日)
+- [ ] **PR-β3**: `CommandPalette` 新規 (UX #6) (0.7 日)
+- [ ] **PR-β4**: フィルタチップ化 + 適用中バー視認強化 (UX #3) (0.5 日)
+
+### Sprint γ — UX P1 続 (1 日)
+
+- [ ] **PR-γ1**: `wouter` 導入、ハッシュルーティング (UX #7) (0.5 日)
+- [ ] **PR-γ2**: ガント「今日に移動」ボタン + 初期スクロール (UX #8) (0.3 日)
+- [ ] **PR-γ3**: 編集モーダル「詳細を表示」折りたたみ (UX #9) (0.2 日)
+
+### Sprint δ — 内部リファクタ (3 日、並行可)
+
+- [ ] **PR-R1**: ESLint `import/no-restricted-paths` 追加 + `lib/` 確立 (0.3 日) ※ α1 と重複可
+- [ ] **PR-R2-R8**: `features/<name>/` への切り出し（auth / summary / progress / gantt / issues / reports） (1.5 日)
+- [ ] **PR-R9**: TanStack Query 導入、`useSprintData` 置換 (0.8 日)
+- [ ] **PR-R10**: Zustand 導入、Dashboard.tsx の useState 移行 (0.5 日)
+- [ ] **PR-R11**: バンドル分割 (lazy + manualChunks) (0.3 日)
+
+### Sprint ε — テスト基盤 (1 日)
+
+- [ ] **PR-T1**: Vitest 導入 + 既存ロジックの unit test (kpi, hierarchy, staleness, overload) (0.5 日)
+- [ ] **PR-T2**: Playwright 導入 + E3-J1〜J5 (Tier 3) (0.5 日)
+- [ ] (任意) Lighthouse CI または自前 perf budget (0.5 日)
+
+### v1.0 リリース基準
+
+- [ ] Sprint α-γ の UX 機能すべてマージ
+- [ ] Reviewer Agent のサインオフ
+- [ ] QA Agent の Tier 1 + Tier 3 通過
+- [ ] UX Agent の受け入れチェックリスト全項目 OK (`wireframe.md` 末尾)
+- [ ] 既存機能の non-regression 確認（手動 + E2E）
 
 ---
 
-## v2.0 — Insights
+## v1.1 — 拡張
 
-Data Analyst Agent の `analytics_report.md` が揃った後の話。
+### バックエンド着手
 
-- [ ] エピック完了予測（過去 Velocity からの ETA 算出）
-- [ ] チーム別見積精度の進化トラッキング
-- [ ] 「自分の Velocity」「自分の見積精度」パーソナル KPI
+- [ ] **PR-B1**: Node.js (Fastify) スケルトン + `/api/health` (0.5 日)
+- [ ] **PR-B2**: `/api/auth` (login/logout/me) + iron-session (0.5 日)
+- [ ] **PR-B3**: `/api/sprints` + `/api/issues` + LRU キャッシュ + dedup (1.5 日)
+- [ ] **PR-B4**: クライアント `lib/jiraApi/client.ts` を `useServerProxy` フラグで切替 (0.5 日)
+- [ ] **PR-B5**: モノレポ化 (pnpm workspaces) (1.0 日)
+
+### 機能追加
+
+- [ ] キャリーオーバー率の Velocity グラフ重ね描き (Analyst #4)
+- [ ] タイプ別見積精度（実 Jira 接続後の評価次第） (Analyst #2)
+- [ ] Vim 風キーボードコンボ (`g s` 等)
+- [ ] IndexedDB 移行（localStorage 容量制限解消）
 
 ---
 
-## やらないことリスト
+## v2.0 — Insights & Personalization
 
-`01-requirements.md` の「明示的にやらない」を再掲。新しいアイデアが出るたびにここを参照。
+- [ ] パーソナル KPI（自分の Velocity / 見積精度の時系列）
+- [ ] エピック完了予測の信頼区間表示
+- [ ] チーム健康度ダッシュボード（バーンダウン / overload / stagnation の縦並び）
+
+---
+
+## やらないことリスト（厳守）
 
 | やらない | 理由 |
 |----------|------|
 | Jira への双方向書き戻し | スコープ外 |
-| ワークフローカスタマイズ | Jira の負け筋 |
-| 通知システム | UX 改善に寄与しない |
+| Jira ワークフローカスタマイズ | Jira の負け筋 |
+| 通知（メール / Slack） | UX 改善に寄与しない |
 | Wiki / Confluence 機能 | スコープ外 |
-| モバイルアプリ | レスポンシブで十分 |
-| ピボットテーブル | 情報密度方針に反する（UX Agent 拒否） |
-| チケットコメント機能 | Jira への二重管理を生む（UX Agent 拒否） |
-| フィルタ条件の任意保存 | Jira の負け筋（UX Agent 拒否） |
-| 任意のカスタムフィールド | 設定肥大化、無限ループ |
+| モバイル専用アプリ | レスポンシブで十分 |
+| 任意のカスタムフィールド | 設定肥大化 |
+| ピボットテーブル | 情報密度方針に反する (UX 拒否) |
+| チケットコメント機能 | Jira への二重管理を生む (UX 拒否) |
+| 任意のフィルタ条件保存 | Jira の負け筋 (UX 拒否) |
+| Storybook (v1.0 中) | エンドユーザー価値 0、v1.0 後に検討 |
+| i18n (v1.0 中) | 想定ユーザー日本語話者、早すぎる最適化 |
 
 ---
 
 ## 進捗の追い方
 
-各エージェントは自分の成果物を `docs/` に更新する。**Issues は Linear or 別ツールで管理** し、このリポジトリの GitHub Issues は使わない（Jira の代替を作っているのに自分が Issues に追われたら本末転倒）。
+- このファイルのチェックボックス更新が真実の情報源
+- 各 PR のタイトルに `PR-α2` のような ID を含める → 追跡しやすい
+- GitHub Issues は使わない（Jira の代替を作っているのに自分が Issues に追われたら本末転倒）
 
-代わりに roadmap.md のチェックボックス更新を真実の情報源とする。
+## 9 エージェントの今後の関わり方
+
+| エージェント | v1.0 中の役割 |
+|-------------|------------|
+| Product Owner | スコープ変更時の判断、roadmap 更新 |
+| Architect | features/ 切り出し PR のレイヤリング確認 |
+| Backend | v1.1 で着手（v1.0 中は待機） |
+| Frontend | 各 UX PR の実装、`features/*/` への移行 |
+| UX | 各 PR を「Jira を超えているか」観点でレビュー（拒否権あり） |
+| Reviewer | 各 PR のコードレビュー、Tier 1 失敗を blocker 扱い |
+| QA | テストフィクスチャ整備、Playwright シナリオ実装 |
+| Data Analyst | 実データ投入後に Analyst #2 #4 の評価 |
+| AI PM | スプリントごとに roadmap の優先順位を見直し |
