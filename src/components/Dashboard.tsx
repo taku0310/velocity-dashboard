@@ -33,6 +33,7 @@ import { MyTasksCard } from './MyTasksCard';
 import { CommandPalette } from './CommandPalette';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useGlobalKeyboard } from '../hooks/useGlobalKeyboard';
+import { buildRoute, useHashRoute } from '../hooks/useHashRoute';
 import { calculateEpicProgress } from '../lib/calc/epic';
 import {
   buildAssigneePerformance,
@@ -124,8 +125,11 @@ export function Dashboard(props: Props) {
     return (active || sprints[0])?.id;
   }, [sprints]);
 
+  const { route, navigate } = useHashRoute();
   const [selectedSprintId, setSelectedSprintId] = useState(defaultSprintId);
   const [activeTab, setActiveTab] = useState<TabId>(() => {
+    // URL ハッシュが優先、なければ localStorage、それもなければ summary
+    if (route.tab) return route.tab;
     const stored = localStorage.getItem('activeTab') as TabId | null;
     return stored && TABS.some((t) => t.id === stored) ? stored : 'summary';
   });
@@ -158,6 +162,35 @@ export function Dashboard(props: Props) {
       setSelectedSprintId(defaultSprintId);
     }
   }, [sprints, selectedSprintId, defaultSprintId]);
+
+  // URL → アプリ状態 (Back/Forward / ペーストされた deeplink 対応)
+  useEffect(() => {
+    if (route.tab !== activeTab) setActiveTab(route.tab);
+    // activeTab を deps に入れるとループするので除外
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [route.tab]);
+
+  // URL → 課題モーダル
+  useEffect(() => {
+    if (!route.issueId) return;
+    const found = sprints.flatMap((s) => s.issues).find((i) => i.id === route.issueId);
+    if (found && (!editingIssue || editingIssue.issue.id !== found.id)) {
+      setEditingIssue({ issue: found, isNew: false });
+    }
+    // editingIssue を deps に入れるとループするので除外
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [route.issueId, sprints]);
+
+  // アプリ状態 → URL（タブ・モーダルが変わったら URL を追従）
+  useEffect(() => {
+    const target = buildRoute({
+      tab: activeTab,
+      issueId: editingIssue?.issue.id,
+    });
+    navigate(target);
+  }, [activeTab, editingIssue, navigate]);
+
+  const handleTabChange = (id: string) => setActiveTab(id as TabId);
 
   const selectedSprint = useMemo(
     () => sprints.find((s) => s.id === selectedSprintId) || sprints[0],
@@ -626,7 +659,7 @@ export function Dashboard(props: Props) {
           </label>
         </div>
 
-        <TabBar tabs={TABS} activeId={activeTab} onChange={(id) => setActiveTab(id as TabId)} />
+        <TabBar tabs={TABS} activeId={activeTab} onChange={handleTabChange} />
 
         <FiltersBar
           filters={filters}

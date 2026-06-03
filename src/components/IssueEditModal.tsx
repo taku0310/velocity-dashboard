@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AlertCircle, Save, Trash2, X } from 'lucide-react';
+import { AlertCircle, ChevronDown, ChevronRight, Save, Trash2, X } from 'lucide-react';
 import type { Issue, IssuePriority, IssueStatus, IssueType } from '../types';
 import { canSetParent } from '../utils/hierarchy';
 import { Modal } from './Modal';
@@ -65,6 +65,7 @@ export function IssueEditModal({
   const [parentId, setParentId] = useState<string>('');
   const [epicId, setEpicId] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
+  const [detailsExpanded, setDetailsExpanded] = useState(false);
 
   useEffect(() => {
     if (!issue) return;
@@ -310,6 +311,17 @@ export function IssueEditModal({
             </div>
           </div>
 
+          <button
+            type="button"
+            onClick={() => setDetailsExpanded((v) => !v)}
+            className="flex items-center gap-1.5 text-sm text-slate-300 hover:text-white py-1 -ml-1"
+          >
+            {detailsExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+            詳細{detailsExpanded ? 'を隠す' : 'を表示'}
+          </button>
+
+          {detailsExpanded && (
+            <div className="space-y-4 pl-2 border-l-2 border-slate-700">
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm text-slate-300 mb-1">タイプ</label>
@@ -407,6 +419,8 @@ export function IssueEditModal({
               className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:border-blue-500"
             />
           </div>
+            </div>
+          )}
 
           {error && (
             <div className="flex items-start gap-2 bg-red-900/30 border border-red-700 text-red-200 px-3 py-2 rounded-lg text-sm">
