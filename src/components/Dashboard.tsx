@@ -30,7 +30,9 @@ import { IssueEditModal } from './IssueEditModal';
 import { SprintEditModal } from './SprintEditModal';
 import { FiltersBar, type IssueFilters } from './FiltersBar';
 import { MyTasksCard } from './MyTasksCard';
+import { CommandPalette } from './CommandPalette';
 import { useCurrentUser } from '../hooks/useCurrentUser';
+import { useGlobalKeyboard } from '../hooks/useGlobalKeyboard';
 import { calculateEpicProgress } from '../lib/calc/epic';
 import {
   buildAssigneePerformance,
@@ -133,7 +135,13 @@ export function Dashboard(props: Props) {
   );
   const [hideCompletedSprints, setHideCompletedSprints] = useState(false);
   const [issuesShowAllSprints, setIssuesShowAllSprints] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const { currentUser, setCurrentUser } = useCurrentUser();
+
+  useGlobalKeyboard({
+    onCmdK: () => setPaletteOpen(true),
+    onSlash: () => document.getElementById('global-search')?.focus(),
+  });
   const [filters, setFilters] = useState<IssueFilters>({
     search: '',
     status: 'all',
@@ -516,6 +524,14 @@ export function Dashboard(props: Props) {
 
           <div className="flex flex-wrap gap-2">
             <button
+              onClick={() => setPaletteOpen(true)}
+              title="検索 (Cmd+K / Ctrl+K)"
+              className="px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm flex items-center gap-2 text-slate-300"
+            >
+              <span className="hidden sm:inline">検索…</span>
+              <kbd className="text-[10px] bg-slate-900 border border-slate-600 rounded px-1.5 py-0.5 font-mono">⌘K</kbd>
+            </button>
+            <button
               onClick={onRefresh}
               title="データを再取得"
               className="px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm flex items-center gap-2"
@@ -662,6 +678,15 @@ export function Dashboard(props: Props) {
           onClose={() => setEditingSprint(null)}
         />
       )}
+
+      <CommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        sprints={sprints}
+        allIssues={allIssuesAllSprints}
+        onSelectIssue={(issue) => setEditingIssue({ issue, isNew: false })}
+        onSelectSprint={(sprint) => setSelectedSprintId(sprint.id)}
+      />
     </div>
   );
 }
