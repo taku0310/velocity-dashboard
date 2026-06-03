@@ -24,28 +24,26 @@
 
 目標: J1〜J5 すべてで Jira を上回る。合計 ~10 日 (UX 4 日 + 内部 4 日 + バッファ)。
 
-### Sprint α — UX P0 (3 日)
+### Sprint α — UX P0 ✅ 完了 (commit `eb3e2c9`)
 
-PR ベースで個別マージ。各 PR は AI PM ROI #1〜#3 に対応。
+- [x] **PR-α1**: `src/lib/calc/` を確立し `staleness.ts` `overload.ts` `epic.ts` を投入
+- [x] **PR-α2**: `MyTasksCard.tsx` でサマリ最上部に F-009 を実装
+- [x] **PR-α3**: `Badge.tsx` (`StalenessBadge` / `OverloadBadge`) を全タブで使用
+- [x] **PR-α4**: エピック ETA + 進捗バーを進捗タブのエピックヘッダーに
+- [x] **PR-α5**: 担当者テーブルに 進行中 / Review滞留 / 未完了pt 列追加、しきい値超過行をティント
 
-- [ ] **PR-α1**: `lib/` フォルダ確立 + `staleness.ts` `overload.ts` `epic.ts` 新規 (0.3 日)
-- [ ] **PR-α2**: `MyTasksCard.tsx` 新規、サマリタブ最上部に配置 (F-009) (0.5 日)
-- [ ] **PR-α3**: `Badge` コンポーネント + 停滞 / overload / Review 滞留ハイライト (F-010 + F-011 + Analyst #3) (1.0 日)
-- [ ] **PR-α4**: エピック ETA 表示 (Analyst #1) — ProgressBoard / IssuesTable のエピックヘッダー拡張 (0.5 日)
-- [ ] **PR-α5**: 担当者テーブル拡張（進行中件数 / Review 滞留 / 未完了 pt 列、しきい値色分け） (0.7 日)
+### Sprint β — UX P1 ✅ 完了 (commit `8d6d022`)
 
-### Sprint β — UX P1 (2 日)
+- [x] **PR-β1**: `Modal.tsx` 共通化 + IssueEditModal / SprintEditModal を移行（Reviewer R-002 解消）
+- [x] **PR-β2**: `useGlobalKeyboard` で `/` フォーカス + `Cmd+K` ハンドラ
+- [x] **PR-β3**: `CommandPalette` 実装（課題 / エピック / スプリント検索、矢印 + Enter）
+- [x] **PR-β4**: `FiltersBar` のチップ化と適用中バーの視覚強化
 
-- [ ] **PR-β1**: `shared/components/Modal.tsx` 共通化 (focus trap, Esc) → 2 モーダルが乗り換え (Reviewer R-002) (0.5 日)
-- [ ] **PR-β2**: `useGlobalKeyboard` フック + `/` フォーカス, `Cmd+K`, `Esc` (0.3 日)
-- [ ] **PR-β3**: `CommandPalette` 新規 (UX #6) (0.7 日)
-- [ ] **PR-β4**: フィルタチップ化 + 適用中バー視認強化 (UX #3) (0.5 日)
+### Sprint γ — UX P1 続 ✅ 完了 (commit `fdb408a`)
 
-### Sprint γ — UX P1 続 (1 日)
-
-- [ ] **PR-γ1**: `wouter` 導入、ハッシュルーティング (UX #7) (0.5 日)
-- [ ] **PR-γ2**: ガント「今日に移動」ボタン + 初期スクロール (UX #8) (0.3 日)
-- [ ] **PR-γ3**: 編集モーダル「詳細を表示」折りたたみ (UX #9) (0.2 日)
+- [x] **PR-γ1**: 自前 `useHashRoute` でハッシュルーティング (wouter 不採用、外部依存なし)
+- [x] **PR-γ2**: ガント「今日に移動」ボタン + 初回マウントの自動スクロール
+- [x] **PR-γ3**: 編集モーダルに「詳細を表示」折りたたみ
 
 ### Sprint δ — 内部リファクタ (3 日、並行可)
 
@@ -57,7 +55,7 @@ PR ベースで個別マージ。各 PR は AI PM ROI #1〜#3 に対応。
 
 ### Sprint ε — テスト基盤 (1 日)
 
-- [ ] **PR-T1**: Vitest 導入 + 既存ロジックの unit test (kpi, hierarchy, staleness, overload) (0.5 日)
+- [x] **PR-T1**: Vitest 導入 + lib/calc/ と utils/hierarchy のユニットテスト 27 件
 - [ ] **PR-T2**: Playwright 導入 + E3-J1〜J5 (Tier 3) (0.5 日)
 - [ ] (任意) Lighthouse CI または自前 perf budget (0.5 日)
 
