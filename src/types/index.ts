@@ -2,7 +2,7 @@
 export type IssueStatus = 'To Do' | 'In Progress' | 'Done' | 'Review';
 
 // 課題タイプ
-export type IssueType = 'Feature' | 'Bug' | 'Improvement' | 'Task';
+export type IssueType = 'Epic' | 'Feature' | 'Bug' | 'Improvement' | 'Task';
 
 // 優先度
 export type IssuePriority = 'Low' | 'Medium' | 'High' | 'Critical';
@@ -31,6 +31,9 @@ export interface Issue {
   completionDate?: string;
   startDate?: string; // ガント表示用（着手日）
   dueDate?: string;   // ガント表示用（期限）
+  parentId?: string;  // 親課題 ID（直接の親）
+  epicId?: string;    // 紐付くエピックの ID（type === 'Epic' の課題を指す）
+  order?: number;     // 兄弟間の並び順（小さいほど上）
   worklogs?: WorkLog[];
 }
 

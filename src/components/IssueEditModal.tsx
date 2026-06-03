@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Save, Trash2, X } from 'lucide-react';
+import { AlertCircle, Save, Trash2, X } from 'lucide-react';
 import type { Issue, IssuePriority, IssueStatus, IssueType } from '../types';
+import { canSetParent } from '../utils/hierarchy';
 
 interface Props {
   issue: Issue | null;
   isNew: boolean;
+  assignees: string[];
+  allIssues: Issue[];
   onSave: (issue: Issue) => void;
   onDelete?: () => void;
   onClose: () => void;
@@ -13,6 +16,9 @@ interface Props {
 const STATUSES: IssueStatus[] = ['To Do', 'In Progress', 'Review', 'Done'];
 const TYPES: IssueType[] = ['Feature', 'Bug', 'Improvement', 'Task'];
 const PRIORITIES: IssuePriority[] = ['Low', 'Medium', 'High', 'Critical'];
+
+const NEW_ASSIGNEE_VALUE = '__NEW__';
+const UNASSIGNED_VALUE = '';
 
 function toInputDate(iso?: string): string {
   if (!iso) return '';
@@ -24,22 +30,134 @@ function fromInputDate(date: string): string | undefined {
   return new Date(date).toISOString();
 }
 
-export function IssueEditModal({ issue, isNew, onSave, onDelete, onClose }: Props) {
-  const [draft, setDraft] = useState<Issue | null>(issue);
+// 数値文字列を受け付けるバリデーション
+function parseNonNegativeNumber(value: string): number | null {
+  if (value.trim() === '') return null;
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return n;
+}
+
+export function IssueEditModal({
+  issue,
+  isNew,
+  assignees,
+  allIssues,
+  onSave,
+  onDelete,
+  onClose,
+}: Props) {
+  // 数値フィールドは入力中の状態を保つため string で持つ
+  const [id, setId] = useState('');
+  const [title, setTitle] = useState('');
+  const [status, setStatus] = useState<IssueStatus>('To Do');
+  const [assignee, setAssignee] = useState('');
+  const [assigneeMode, setAssigneeMode] = useState<'select' | 'custom'>('select');
+  const [pointsStr, setPointsStr] = useState('0');
+  const [estStr, setEstStr] = useState('0');
+  const [actStr, setActStr] = useState('0');
+  const [type, setType] = useState<IssueType>('Task');
+  const [priority, setPriority] = useState<IssuePriority>('Medium');
+  const [startDate, setStartDate] = useState('');
+  const [dueDate, setDueDate] = useState('');
+  const [labelsStr, setLabelsStr] = useState('');
+  const [parentId, setParentId] = useState<string>('');
+  const [epicId, setEpicId] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setDraft(issue);
-  }, [issue]);
+    if (!issue) return;
+    setId(issue.id);
+    setTitle(issue.title);
+    setStatus(issue.status);
+    setAssignee(issue.assignee || '');
+    // 既存の担当者が選択肢に含まれていない場合はカスタムモード
+    if (issue.assignee && !assignees.includes(issue.assignee)) {
+      setAssigneeMode('custom');
+    } else {
+      setAssigneeMode('select');
+    }
+    setPointsStr(String(issue.points));
+    setEstStr(String(issue.estimatedHours));
+    setActStr(String(issue.actualHours));
+    setType(issue.type);
+    setPriority(issue.priority);
+    setStartDate(toInputDate(issue.startDate));
+    setDueDate(toInputDate(issue.dueDate));
+    setLabelsStr(issue.labels.join(', '));
+    setParentId(issue.parentId || '');
+    setEpicId(issue.epicId || '');
+    setError(null);
+  }, [issue, assignees]);
 
-  if (!draft) return null;
+  if (!issue) return null;
 
-  const update = <K extends keyof Issue>(key: K, value: Issue[K]) => {
-    setDraft({ ...draft, [key]: value });
+  // 親候補: 自分自身と子孫を除く / Epic は親候補から除外（Epic は別フィールドで指定）
+  const parentCandidates = allIssues.filter((i) => {
+    if (i.id === issue.id) return false;
+    if (i.type === 'Epic') return false;
+    return canSetParent(allIssues, issue.id, i.id);
+  });
+  // エピック候補: type === 'Epic' のもの。Epic 同士は紐付けない
+  const epicCandidates =
+    issue.type === 'Epic' ? [] : allIssues.filter((i) => i.type === 'Epic' && i.id !== issue.id);
+
+  const handleAssigneeChange = (value: string) => {
+    if (value === NEW_ASSIGNEE_VALUE) {
+      setAssigneeMode('custom');
+      setAssignee('');
+    } else {
+      setAssigneeMode('select');
+      setAssignee(value);
+    }
   };
 
   const handleSave = () => {
-    if (!draft.title.trim()) return;
-    onSave(draft);
+    // バリデーション
+    if (!title.trim()) {
+      setError('タイトルは必須です');
+      return;
+    }
+    const points = parseNonNegativeNumber(pointsStr);
+    const est = parseNonNegativeNumber(estStr);
+    const act = parseNonNegativeNumber(actStr);
+    if (points === null) {
+      setError('Points を 0 以上の数値で入力してください');
+      return;
+    }
+    if (est === null) {
+      setError('見積（h）を 0 以上の数値で入力してください');
+      return;
+    }
+    if (act === null) {
+      setError('実績（h）を 0 以上の数値で入力してください');
+      return;
+    }
+    if (!id.trim()) {
+      setError('ID は必須です');
+      return;
+    }
+
+    onSave({
+      ...issue,
+      id: id.trim(),
+      title: title.trim(),
+      status,
+      assignee: assignee.trim(),
+      points,
+      estimatedHours: est,
+      actualHours: act,
+      type,
+      priority,
+      startDate: fromInputDate(startDate),
+      dueDate: fromInputDate(dueDate),
+      labels: labelsStr
+        .split(',')
+        .map((l) => l.trim())
+        .filter(Boolean),
+      parentId: parentId || undefined,
+      epicId: issue.type === 'Epic' ? undefined : epicId || undefined,
+    });
   };
 
   return (
@@ -52,7 +170,9 @@ export function IssueEditModal({ issue, isNew, onSave, onDelete, onClose }: Prop
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold">{isNew ? '課題を追加' : `課題を編集 (${draft.id})`}</h2>
+          <h2 className="text-xl font-bold">
+            {isNew ? '課題を追加' : `課題を編集 (${issue.id})`}
+          </h2>
           <button onClick={onClose} className="text-slate-400 hover:text-white">
             <X size={20} />
           </button>
@@ -60,11 +180,11 @@ export function IssueEditModal({ issue, isNew, onSave, onDelete, onClose }: Prop
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm text-slate-300 mb-1">ID</label>
+            <label className="block text-sm text-slate-300 mb-1">ID *</label>
             <input
               type="text"
-              value={draft.id}
-              onChange={(e) => update('id', e.target.value)}
+              value={id}
+              onChange={(e) => setId(e.target.value)}
               className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:border-blue-500 font-mono text-sm"
             />
           </div>
@@ -73,9 +193,8 @@ export function IssueEditModal({ issue, isNew, onSave, onDelete, onClose }: Prop
             <label className="block text-sm text-slate-300 mb-1">タイトル *</label>
             <input
               type="text"
-              required
-              value={draft.title}
-              onChange={(e) => update('title', e.target.value)}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
               className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:border-blue-500"
             />
           </div>
@@ -84,8 +203,8 @@ export function IssueEditModal({ issue, isNew, onSave, onDelete, onClose }: Prop
             <div>
               <label className="block text-sm text-slate-300 mb-1">ステータス</label>
               <select
-                value={draft.status}
-                onChange={(e) => update('status', e.target.value as IssueStatus)}
+                value={status}
+                onChange={(e) => setStatus(e.target.value as IssueStatus)}
                 className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:border-blue-500"
               >
                 {STATUSES.map((s) => (
@@ -97,45 +216,74 @@ export function IssueEditModal({ issue, isNew, onSave, onDelete, onClose }: Prop
             </div>
             <div>
               <label className="block text-sm text-slate-300 mb-1">担当者</label>
-              <input
-                type="text"
-                value={draft.assignee}
-                onChange={(e) => update('assignee', e.target.value)}
-                className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:border-blue-500"
-              />
+              {assigneeMode === 'select' ? (
+                <select
+                  value={assignee}
+                  onChange={(e) => handleAssigneeChange(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:border-blue-500"
+                >
+                  <option value={UNASSIGNED_VALUE}>未アサイン</option>
+                  {assignees.map((a) => (
+                    <option key={a} value={a}>
+                      {a}
+                    </option>
+                  ))}
+                  <option value={NEW_ASSIGNEE_VALUE}>＋ 新しい担当者を入力…</option>
+                </select>
+              ) : (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    autoFocus
+                    placeholder="新しい担当者名"
+                    value={assignee}
+                    onChange={(e) => setAssignee(e.target.value)}
+                    className="flex-1 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:border-blue-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAssigneeMode('select');
+                      setAssignee('');
+                    }}
+                    className="px-2 text-slate-400 hover:text-white"
+                    title="プルダウンに戻す"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block text-sm text-slate-300 mb-1">Points</label>
+              <label className="block text-sm text-slate-300 mb-1">Points *</label>
               <input
-                type="number"
-                min={0}
-                value={draft.points}
-                onChange={(e) => update('points', Number(e.target.value))}
+                type="text"
+                inputMode="decimal"
+                value={pointsStr}
+                onChange={(e) => setPointsStr(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:border-blue-500"
               />
             </div>
             <div>
-              <label className="block text-sm text-slate-300 mb-1">見積 (h)</label>
+              <label className="block text-sm text-slate-300 mb-1">見積 (h) *</label>
               <input
-                type="number"
-                min={0}
-                step={0.5}
-                value={draft.estimatedHours}
-                onChange={(e) => update('estimatedHours', Number(e.target.value))}
+                type="text"
+                inputMode="decimal"
+                value={estStr}
+                onChange={(e) => setEstStr(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:border-blue-500"
               />
             </div>
             <div>
-              <label className="block text-sm text-slate-300 mb-1">実績 (h)</label>
+              <label className="block text-sm text-slate-300 mb-1">実績 (h) *</label>
               <input
-                type="number"
-                min={0}
-                step={0.5}
-                value={draft.actualHours}
-                onChange={(e) => update('actualHours', Number(e.target.value))}
+                type="text"
+                inputMode="decimal"
+                value={actStr}
+                onChange={(e) => setActStr(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:border-blue-500"
               />
             </div>
@@ -145,8 +293,8 @@ export function IssueEditModal({ issue, isNew, onSave, onDelete, onClose }: Prop
             <div>
               <label className="block text-sm text-slate-300 mb-1">タイプ</label>
               <select
-                value={draft.type}
-                onChange={(e) => update('type', e.target.value as IssueType)}
+                value={type}
+                onChange={(e) => setType(e.target.value as IssueType)}
                 className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:border-blue-500"
               >
                 {TYPES.map((t) => (
@@ -159,8 +307,8 @@ export function IssueEditModal({ issue, isNew, onSave, onDelete, onClose }: Prop
             <div>
               <label className="block text-sm text-slate-300 mb-1">優先度</label>
               <select
-                value={draft.priority}
-                onChange={(e) => update('priority', e.target.value as IssuePriority)}
+                value={priority}
+                onChange={(e) => setPriority(e.target.value as IssuePriority)}
                 className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:border-blue-500"
               >
                 {PRIORITIES.map((p) => (
@@ -177,8 +325,8 @@ export function IssueEditModal({ issue, isNew, onSave, onDelete, onClose }: Prop
               <label className="block text-sm text-slate-300 mb-1">着手日</label>
               <input
                 type="date"
-                value={toInputDate(draft.startDate)}
-                onChange={(e) => update('startDate', fromInputDate(e.target.value))}
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:border-blue-500"
               />
             </div>
@@ -186,30 +334,65 @@ export function IssueEditModal({ issue, isNew, onSave, onDelete, onClose }: Prop
               <label className="block text-sm text-slate-300 mb-1">期限</label>
               <input
                 type="date"
-                value={toInputDate(draft.dueDate)}
-                onChange={(e) => update('dueDate', fromInputDate(e.target.value))}
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:border-blue-500"
               />
             </div>
           </div>
 
+          {issue.type !== 'Epic' && (
+            <div>
+              <label className="block text-sm text-slate-300 mb-1">エピック</label>
+              <select
+                value={epicId}
+                onChange={(e) => setEpicId(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:border-blue-500"
+              >
+                <option value="">なし</option>
+                {epicCandidates.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.id} — {c.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div>
-            <label className="block text-sm text-slate-300 mb-1">ラベル（カンマ区切り）</label>
+            <label className="block text-sm text-slate-300 mb-1">親課題（サブタスク化）</label>
+            <select
+              value={parentId}
+              onChange={(e) => setParentId(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:border-blue-500"
+            >
+              <option value="">なし</option>
+              {parentCandidates.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.id} — {c.title}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm text-slate-300 mb-1">
+              ラベル（カンマ区切り）
+            </label>
             <input
               type="text"
-              value={draft.labels.join(', ')}
-              onChange={(e) =>
-                update(
-                  'labels',
-                  e.target.value
-                    .split(',')
-                    .map((l) => l.trim())
-                    .filter(Boolean),
-                )
-              }
+              value={labelsStr}
+              onChange={(e) => setLabelsStr(e.target.value)}
               className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:border-blue-500"
             />
           </div>
+
+          {error && (
+            <div className="flex items-start gap-2 bg-red-900/30 border border-red-700 text-red-200 px-3 py-2 rounded-lg text-sm">
+              <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
+              <span>{error}</span>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-700">
@@ -233,8 +416,7 @@ export function IssueEditModal({ issue, isNew, onSave, onDelete, onClose }: Prop
             </button>
             <button
               onClick={handleSave}
-              disabled={!draft.title.trim()}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 disabled:cursor-not-allowed rounded-lg text-sm flex items-center gap-2"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm flex items-center gap-2"
             >
               <Save size={16} />
               保存
