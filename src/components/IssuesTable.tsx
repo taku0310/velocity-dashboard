@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight, FolderTree, ListChecks } from 'lucide-react';
 import type { Issue, IssueStatus } from '../types';
 import { SortableHeader, compareValues, nextSortState } from './SortableHeader';
+import { getStaleness } from '../lib/calc/staleness';
+import { StalenessBadge } from './Badge';
 
 interface Props {
   issues: Issue[];
@@ -63,17 +65,25 @@ export function IssuesTable({ issues, onIssueClick, groupByEpic = false }: Props
     });
   };
 
-  const renderRow = (issue: EnrichedIssue) => (
-    <tr
-      key={issue.id}
-      onClick={() => onIssueClick?.(issue)}
-      className={`border-b border-slate-800 hover:bg-slate-700/20 ${
-        onIssueClick ? 'cursor-pointer' : ''
-      }`}
-    >
-      <td className="py-2 px-2 font-mono text-xs text-blue-300">{issue.id}</td>
-      <td className="py-2 px-2 max-w-[280px] truncate">{issue.title}</td>
-      <td className="py-2 px-2 text-slate-400 text-xs">{issue.type}</td>
+  const renderRow = (issue: EnrichedIssue) => {
+    const staleness = getStaleness(issue);
+    return (
+      <tr
+        key={issue.id}
+        onClick={() => onIssueClick?.(issue)}
+        data-testid={`issue-row-${issue.id}`}
+        className={`border-b border-slate-800 hover:bg-slate-700/20 ${
+          onIssueClick ? 'cursor-pointer' : ''
+        }`}
+      >
+        <td className="py-2 px-2 font-mono text-xs text-blue-300">
+          <div className="flex items-center gap-1.5">
+            <span>{issue.id}</span>
+            {staleness && <StalenessBadge staleness={staleness} compact />}
+          </div>
+        </td>
+        <td className="py-2 px-2 max-w-[280px] truncate">{issue.title}</td>
+        <td className="py-2 px-2 text-slate-400 text-xs">{issue.type}</td>
       <td className="py-2 px-2 text-right">{issue.points}</td>
       <td className="py-2 px-2 text-right">{issue.estimatedHours}</td>
       <td className="py-2 px-2 text-right">{issue.actualHours}</td>
@@ -86,7 +96,8 @@ export function IssuesTable({ issues, onIssueClick, groupByEpic = false }: Props
       <td className="py-2 px-2 text-slate-300">{issue.assignee || '未アサイン'}</td>
       <td className="py-2 px-2 text-slate-400 text-xs">{(issue.labels || []).join(', ') || '—'}</td>
     </tr>
-  );
+    );
+  };
 
   const header = (
     <thead>

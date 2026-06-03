@@ -29,6 +29,9 @@ import { GanttChart } from './GanttChart';
 import { IssueEditModal } from './IssueEditModal';
 import { SprintEditModal } from './SprintEditModal';
 import { FiltersBar, type IssueFilters } from './FiltersBar';
+import { MyTasksCard } from './MyTasksCard';
+import { useCurrentUser } from '../hooks/useCurrentUser';
+import { calculateEpicProgress } from '../lib/calc/epic';
 import {
   buildAssigneePerformance,
   buildEstimateAccuracy,
@@ -130,6 +133,7 @@ export function Dashboard(props: Props) {
   );
   const [hideCompletedSprints, setHideCompletedSprints] = useState(false);
   const [issuesShowAllSprints, setIssuesShowAllSprints] = useState(false);
+  const { currentUser, setCurrentUser } = useCurrentUser();
   const [filters, setFilters] = useState<IssueFilters>({
     search: '',
     status: 'all',
@@ -235,6 +239,12 @@ export function Dashboard(props: Props) {
     const set = new Set<string>();
     sprints.forEach((s) => s.issues.forEach((i) => i.labels.forEach((l) => set.add(l))));
     return Array.from(set).sort();
+  }, [sprints]);
+
+  // エピック進捗（プロジェクト全体）
+  const epicProgressById = useMemo(() => {
+    const progress = calculateEpicProgress(sprints);
+    return new Map(progress.map((p) => [p.epic.id, p]));
   }, [sprints]);
 
   // 課題 ID → スプリント ID マップ
@@ -359,6 +369,13 @@ export function Dashboard(props: Props) {
       case 'summary':
         return (
           <div className="space-y-6">
+            <MyTasksCard
+              currentUser={currentUser}
+              assignees={allAssignees}
+              issues={allIssuesAllSprints}
+              onSetCurrentUser={setCurrentUser}
+              onIssueClick={(issue) => setEditingIssue({ issue, isNew: false })}
+            />
             <KPICards metrics={metrics} />
             <div className="bg-slate-800 bg-opacity-50 border border-slate-700 rounded-xl p-6 backdrop-blur">
               <h2 className="text-lg font-bold mb-2">スプリント結果サマリー</h2>
@@ -370,7 +387,7 @@ export function Dashboard(props: Props) {
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <EstimateAccuracyChart data={accuracyData} />
-              <AssigneeTable data={assigneeData} />
+              <AssigneeTable data={assigneeData} issues={filteredIssues} />
             </div>
           </div>
         );
@@ -381,6 +398,7 @@ export function Dashboard(props: Props) {
             <KPICards metrics={metrics} />
             <ProgressBoard
               issues={filteredIssues}
+              epicProgressById={epicProgressById}
               onIssueClick={(issue) => setEditingIssue({ issue, isNew: false })}
               onAdd={(status, epicId) => openNewIssue(status, epicId)}
               onStatusChange={(issueId, newStatus) =>
@@ -474,7 +492,7 @@ export function Dashboard(props: Props) {
               </div>
             </div>
             <VelocityChart data={velocityData} />
-            <AssigneeTable data={assigneeData} />
+            <AssigneeTable data={assigneeData} issues={filteredIssues} />
             <EstimateAccuracyChart data={accuracyData} />
             <div className="bg-slate-800 bg-opacity-50 border border-slate-700 rounded-xl p-6 backdrop-blur">
               <h2 className="text-lg font-bold mb-2">サマリー</h2>
