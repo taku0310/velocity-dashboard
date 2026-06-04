@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { AlertCircle, Save, Trash2, X } from 'lucide-react';
+import { AlertCircle, ChevronDown, ChevronRight, Save, Trash2, X } from 'lucide-react';
 import type { Issue, IssuePriority, IssueStatus, IssueType } from '../types';
 import { canSetParent } from '../utils/hierarchy';
+import { Modal } from './Modal';
 
 interface Props {
   issue: Issue | null;
@@ -64,6 +65,7 @@ export function IssueEditModal({
   const [parentId, setParentId] = useState<string>('');
   const [epicId, setEpicId] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
+  const [detailsExpanded, setDetailsExpanded] = useState(false);
 
   useEffect(() => {
     if (!issue) return;
@@ -160,25 +162,45 @@ export function IssueEditModal({
     });
   };
 
-  return (
-    <div
-      className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
-      onClick={onClose}
-    >
-      <div
-        className="bg-slate-900 border border-slate-700 rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold">
-            {isNew ? '課題を追加' : `課題を編集 (${issue.id})`}
-          </h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-white">
-            <X size={20} />
-          </button>
-        </div>
+  const footer = (
+    <div className="flex items-center justify-between">
+      {!isNew && onDelete ? (
+        <button
+          onClick={onDelete}
+          className="px-3 py-2 text-red-400 hover:text-red-300 flex items-center gap-2 text-sm"
+        >
+          <Trash2 size={16} />
+          削除
+        </button>
+      ) : (
+        <span />
+      )}
+      <div className="flex gap-2">
+        <button
+          onClick={onClose}
+          className="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm"
+        >
+          キャンセル
+        </button>
+        <button
+          onClick={handleSave}
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm flex items-center gap-2"
+        >
+          <Save size={16} />
+          保存
+        </button>
+      </div>
+    </div>
+  );
 
-        <div className="space-y-4">
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title={isNew ? '課題を追加' : `課題を編集 (${issue.id})`}
+      footer={footer}
+    >
+      <div className="space-y-4">
           <div>
             <label className="block text-sm text-slate-300 mb-1">ID *</label>
             <input
@@ -289,6 +311,17 @@ export function IssueEditModal({
             </div>
           </div>
 
+          <button
+            type="button"
+            onClick={() => setDetailsExpanded((v) => !v)}
+            className="flex items-center gap-1.5 text-sm text-slate-300 hover:text-white py-1 -ml-1"
+          >
+            {detailsExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+            詳細{detailsExpanded ? 'を隠す' : 'を表示'}
+          </button>
+
+          {detailsExpanded && (
+            <div className="space-y-4 pl-2 border-l-2 border-slate-700">
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm text-slate-300 mb-1">タイプ</label>
@@ -386,6 +419,8 @@ export function IssueEditModal({
               className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:outline-none focus:border-blue-500"
             />
           </div>
+            </div>
+          )}
 
           {error && (
             <div className="flex items-start gap-2 bg-red-900/30 border border-red-700 text-red-200 px-3 py-2 rounded-lg text-sm">
@@ -393,37 +428,7 @@ export function IssueEditModal({
               <span>{error}</span>
             </div>
           )}
-        </div>
-
-        <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-700">
-          {!isNew && onDelete ? (
-            <button
-              onClick={onDelete}
-              className="px-3 py-2 text-red-400 hover:text-red-300 flex items-center gap-2 text-sm"
-            >
-              <Trash2 size={16} />
-              削除
-            </button>
-          ) : (
-            <span />
-          )}
-          <div className="flex gap-2">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-sm"
-            >
-              キャンセル
-            </button>
-            <button
-              onClick={handleSave}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm flex items-center gap-2"
-            >
-              <Save size={16} />
-              保存
-            </button>
-          </div>
-        </div>
       </div>
-    </div>
+    </Modal>
   );
 }

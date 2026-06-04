@@ -1,5 +1,14 @@
-import { useMemo, useState } from 'react';
-import { Bug, CalendarDays, ChevronRight, FileText, Home, Sparkles, Wrench } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Bug,
+  CalendarDays,
+  ChevronRight,
+  FileText,
+  Home,
+  Locate,
+  Sparkles,
+  Wrench,
+} from 'lucide-react';
 import type { Issue, IssueStatus, IssueType, Sprint } from '../types';
 import { buildHierarchy, canSetParent, effectiveParentId, getSiblings } from '../utils/hierarchy';
 
@@ -221,6 +230,29 @@ export function GanttChart({ sprints, onIssueClick, onSetParent, onReorder }: Pr
 
   const dragEnabled = !!onSetParent || !!onReorder;
 
+  // 横スクロールコンテナ。「今日に移動」と初回マウントの自動スクロールに使う。
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const scrollToToday = () => {
+    const el = scrollRef.current;
+    if (!el || !showToday) return;
+    // ラベル列 (18rem ≒ 288px) 分を除いた領域に対する位置を概算
+    const labelColPx = 288;
+    const trackWidth = el.scrollWidth - labelColPx;
+    const offset = labelColPx + trackWidth * (todayPct / 100);
+    // 今日線を画面中央付近に
+    const left = Math.max(0, offset - el.clientWidth / 2);
+    el.scrollTo({ left, behavior: 'smooth' });
+  };
+
+  // マウント時 / 行数変化時に「今日」を初期表示位置に
+  useEffect(() => {
+    if (!showToday) return;
+    const id = requestAnimationFrame(scrollToToday);
+    return () => cancelAnimationFrame(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows.length]);
+
   return (
     <div className="bg-slate-800 bg-opacity-50 border border-slate-700 rounded-xl p-6 backdrop-blur">
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
@@ -228,13 +260,25 @@ export function GanttChart({ sprints, onIssueClick, onSetParent, onReorder }: Pr
           <CalendarDays size={22} className="text-blue-400" />
           ガントチャート（プロジェクト全体）
         </h2>
-        <div className="flex items-center gap-3 text-xs text-slate-400">
-          {(['To Do', 'In Progress', 'Review', 'Done'] as IssueStatus[]).map((s) => (
-            <span key={s} className="flex items-center gap-1">
-              <span className={`w-3 h-3 rounded-sm ${STATUS_COLORS[s]}`} />
-              {s}
-            </span>
-          ))}
+        <div className="flex items-center gap-2 flex-wrap">
+          {showToday && (
+            <button
+              onClick={scrollToToday}
+              className="px-2.5 py-1 text-xs bg-amber-700/30 hover:bg-amber-700/50 border border-amber-600/50 text-amber-100 rounded flex items-center gap-1.5"
+              title="本日に移動"
+            >
+              <Locate size={12} />
+              今日に移動
+            </button>
+          )}
+          <div className="flex items-center gap-3 text-xs text-slate-400">
+            {(['To Do', 'In Progress', 'Review', 'Done'] as IssueStatus[]).map((s) => (
+              <span key={s} className="flex items-center gap-1">
+                <span className={`w-3 h-3 rounded-sm ${STATUS_COLORS[s]}`} />
+                {s}
+              </span>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -247,7 +291,7 @@ export function GanttChart({ sprints, onIssueClick, onSetParent, onReorder }: Pr
         </p>
       )}
 
-      <div className="overflow-x-auto">
+      <div ref={scrollRef} className="overflow-x-auto">
         <div className="min-w-[900px]">
           {/* ヘッダー（日付） */}
           <div className="flex border-b border-slate-700 pb-2 mb-2">

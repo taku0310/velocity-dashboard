@@ -1,9 +1,13 @@
 import { useMemo, useState } from 'react';
 import { Kanban, Plus, User } from 'lucide-react';
+import type { EpicProgress } from '../lib/calc/epic';
+import { getStaleness } from '../lib/calc/staleness';
 import type { Issue, IssueStatus } from '../types';
+import { StalenessBadge } from './Badge';
 
 interface Props {
   issues: Issue[];
+  epicProgressById?: Map<string, EpicProgress>;
   onIssueClick?: (issue: Issue) => void;
   onAdd?: (status: IssueStatus, epicId?: string) => void;
   onStatusChange?: (issueId: string, newStatus: IssueStatus) => void;
@@ -25,7 +29,13 @@ interface EpicGroup {
   issues: Issue[];
 }
 
-export function ProgressBoard({ issues, onIssueClick, onAdd, onStatusChange }: Props) {
+export function ProgressBoard({
+  issues,
+  epicProgressById,
+  onIssueClick,
+  onAdd,
+  onStatusChange,
+}: Props) {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<{ epicKey: string; status: IssueStatus } | null>(
     null,
@@ -117,32 +127,53 @@ export function ProgressBoard({ issues, onIssueClick, onAdd, onStatusChange }: P
           const donePoints = group.issues
             .filter((i) => i.status === 'Done')
             .reduce((s, i) => s + i.points, 0);
+          const epicProg = group.epic ? epicProgressById?.get(group.epic.id) : undefined;
           return (
             <div key={group.key} className="border border-slate-700 rounded-lg overflow-hidden">
-              <div className="bg-slate-800/60 px-4 py-2 flex items-center justify-between">
-                <div className="flex items-center gap-2 min-w-0">
-                  {group.epic ? (
-                    <>
-                      <span className="px-2 py-0.5 bg-purple-700 rounded text-xs text-purple-100 flex-shrink-0">
-                        EPIC
-                      </span>
-                      <span className="font-mono text-xs text-blue-300 flex-shrink-0">
-                        {group.epic.id}
-                      </span>
-                      <span className="text-slate-100 truncate">{group.epic.title}</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="px-2 py-0.5 bg-slate-700 rounded text-xs text-slate-300 flex-shrink-0">
-                        未分類
-                      </span>
-                      <span className="text-slate-200">エピック未割り当て</span>
-                    </>
-                  )}
+              <div className="bg-slate-800/60 px-4 py-2 flex flex-col gap-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    {group.epic ? (
+                      <>
+                        <span className="px-2 py-0.5 bg-purple-700 rounded text-xs text-purple-100 flex-shrink-0">
+                          EPIC
+                        </span>
+                        <span className="font-mono text-xs text-blue-300 flex-shrink-0">
+                          {group.epic.id}
+                        </span>
+                        <span className="text-slate-100 truncate">{group.epic.title}</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="px-2 py-0.5 bg-slate-700 rounded text-xs text-slate-300 flex-shrink-0">
+                          未分類
+                        </span>
+                        <span className="text-slate-200">エピック未割り当て</span>
+                      </>
+                    )}
+                  </div>
+                  <div className="text-xs text-slate-400 flex-shrink-0 ml-2 flex items-center gap-2">
+                    <span>
+                      {group.issues.length}件 · {donePoints}/{totalPoints}pt
+                    </span>
+                    {epicProg && epicProg.totalPoints > 0 && (
+                      <span className="text-purple-300">ETA {epicProg.etaLabel}</span>
+                    )}
+                  </div>
                 </div>
-                <div className="text-xs text-slate-400 flex-shrink-0 ml-2">
-                  {group.issues.length}件 · {donePoints}/{totalPoints}pt
-                </div>
+                {epicProg && epicProg.totalPoints > 0 && (
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-1.5 bg-slate-900/60 rounded overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-purple-500 to-blue-500 transition-all"
+                        style={{ width: `${epicProg.percentComplete}%` }}
+                      />
+                    </div>
+                    <span className="text-xs text-slate-400 font-mono w-12 text-right">
+                      {epicProg.percentComplete}%
+                    </span>
+                  </div>
+                )}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 p-2 bg-slate-900/30">
                 {COLUMNS.map((col) => {
@@ -182,6 +213,7 @@ export function ProgressBoard({ issues, onIssueClick, onAdd, onStatusChange }: P
                       <div className="space-y-1.5">
                         {colIssues.map((issue) => {
                           const dragging = draggingId === issue.id;
+                          const staleness = getStaleness(issue);
                           return (
                             <div
                               key={issue.id}
@@ -193,13 +225,16 @@ export function ProgressBoard({ issues, onIssueClick, onAdd, onStatusChange }: P
                                 dragging ? 'opacity-50' : ''
                               } ${onStatusChange ? 'active:cursor-grabbing' : ''}`}
                             >
-                              <div className="flex items-center justify-between mb-1">
+                              <div className="flex items-center justify-between mb-1 gap-1">
                                 <span className="font-mono text-[10px] text-blue-300">
                                   {issue.id}
                                 </span>
-                                <span className="text-[10px] text-slate-400">
-                                  {issue.points}pt
-                                </span>
+                                <div className="flex items-center gap-1">
+                                  {staleness && <StalenessBadge staleness={staleness} compact />}
+                                  <span className="text-[10px] text-slate-400">
+                                    {issue.points}pt
+                                  </span>
+                                </div>
                               </div>
                               <p className="text-xs text-slate-200 line-clamp-2 mb-1">
                                 {issue.title}
