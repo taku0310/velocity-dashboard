@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   CalendarDays,
   CheckCircle2,
-  Download,
   EyeOff,
   FileText,
   Kanban,
@@ -17,24 +16,31 @@ import {
 } from 'lucide-react';
 import type { Issue, IssueStatus, Sprint } from '../types';
 import { TabBar, type TabItem } from './TabBar';
-import { KPICards } from './KPICards';
-import { BurndownChart } from './BurndownChart';
-import { VelocityChart } from './VelocityChart';
-import { EstimateAccuracyChart } from './EstimateAccuracyChart';
-import { AssigneeTable } from './AssigneeTable';
-import { IssuesTable } from './IssuesTable';
-import { WorkLogList } from './WorkLogList';
-import { ProgressBoard } from './ProgressBoard';
-import { GanttChart } from './GanttChart';
 import { IssueEditModal } from './IssueEditModal';
 import { SprintEditModal } from './SprintEditModal';
 import { FiltersBar, type IssueFilters } from './FiltersBar';
-import { MyTasksCard } from './MyTasksCard';
 import { CommandPalette } from './CommandPalette';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useGlobalKeyboard } from '../hooks/useGlobalKeyboard';
 import { buildRoute, useHashRoute } from '../hooks/useHashRoute';
 import { calculateEpicProgress } from '../lib/calc/epic';
+
+// 各タブはコード分割で別チャンク化
+const SummaryTab = lazy(() =>
+  import('../features/summary/SummaryTab').then((m) => ({ default: m.SummaryTab })),
+);
+const ProgressTab = lazy(() =>
+  import('../features/progress/ProgressTab').then((m) => ({ default: m.ProgressTab })),
+);
+const GanttTab = lazy(() =>
+  import('../features/gantt/GanttTab').then((m) => ({ default: m.GanttTab })),
+);
+const IssuesTab = lazy(() =>
+  import('../features/issues/IssuesTab').then((m) => ({ default: m.IssuesTab })),
+);
+const ReportsTab = lazy(() =>
+  import('../features/reports/ReportsTab').then((m) => ({ default: m.ReportsTab })),
+);
 import {
   buildAssigneePerformance,
   buildEstimateAccuracy,
@@ -405,56 +411,48 @@ export function Dashboard(props: Props) {
 
   const issuesForCurrentTab = issuesShowAllSprints ? filteredAllIssues : filteredIssues;
 
+  const onIssueClick = (issue: Issue) => setEditingIssue({ issue, isNew: false });
+
   const renderTab = () => {
     switch (activeTab) {
       case 'summary':
         return (
-          <div className="space-y-6">
-            <MyTasksCard
-              currentUser={currentUser}
-              assignees={allAssignees}
-              issues={allIssuesAllSprints}
-              onSetCurrentUser={setCurrentUser}
-              onIssueClick={(issue) => setEditingIssue({ issue, isNew: false })}
-            />
-            <KPICards metrics={metrics} />
-            <div className="bg-slate-800 bg-opacity-50 border border-slate-700 rounded-xl p-6 backdrop-blur">
-              <h2 className="text-lg font-bold mb-2">スプリント結果サマリー</h2>
-              <p className="text-slate-200 leading-relaxed">{summary}</p>
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <BurndownChart data={filteredSprintView.burndown} />
-              <VelocityChart data={velocityData} />
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <EstimateAccuracyChart data={accuracyData} />
-              <AssigneeTable data={assigneeData} issues={filteredIssues} />
-            </div>
-          </div>
+          <SummaryTab
+            metrics={metrics}
+            summary={summary}
+            burndown={filteredSprintView.burndown}
+            velocityData={velocityData}
+            accuracyData={accuracyData}
+            assigneeData={assigneeData}
+            filteredIssues={filteredIssues}
+            allIssues={allIssuesAllSprints}
+            allAssignees={allAssignees}
+            currentUser={currentUser}
+            onSetCurrentUser={setCurrentUser}
+            onIssueClick={onIssueClick}
+          />
         );
 
       case 'progress':
         return (
-          <div className="space-y-6">
-            <KPICards metrics={metrics} />
-            <ProgressBoard
-              issues={filteredIssues}
-              epicProgressById={epicProgressById}
-              onIssueClick={(issue) => setEditingIssue({ issue, isNew: false })}
-              onAdd={(status, epicId) => openNewIssue(status, epicId)}
-              onStatusChange={(issueId, newStatus) =>
-                onUpdateIssue(selectedSprint.id, issueId, { status: newStatus })
-              }
-            />
-            <BurndownChart data={filteredSprintView.burndown} />
-          </div>
+          <ProgressTab
+            metrics={metrics}
+            burndown={filteredSprintView.burndown}
+            filteredIssues={filteredIssues}
+            epicProgressById={epicProgressById}
+            onIssueClick={onIssueClick}
+            onAdd={openNewIssue}
+            onStatusChange={(issueId, newStatus) =>
+              onUpdateIssue(selectedSprint.id, issueId, { status: newStatus })
+            }
+          />
         );
 
       case 'gantt':
         return (
-          <GanttChart
+          <GanttTab
             sprints={filteredSprintsForGantt}
-            onIssueClick={(issue) => setEditingIssue({ issue, isNew: false })}
+            onIssueClick={onIssueClick}
             onSetParent={(childId, newParentId) => {
               const sprintId = issueToSprintId.get(childId);
               if (!sprintId) return;
@@ -475,71 +473,28 @@ export function Dashboard(props: Props) {
 
       case 'issues':
         return (
-          <div className="space-y-6">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={issuesShowAllSprints}
-                  onChange={(e) => setIssuesShowAllSprints(e.target.checked)}
-                  className="rounded"
-                />
-                全スプリントの課題を表示
-              </label>
-              <button
-                onClick={() => openNewIssue()}
-                className="px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm flex items-center gap-2"
-              >
-                <Plus size={16} />
-                課題を追加（{selectedSprint.name}）
-              </button>
-            </div>
-            <IssuesTable
-              issues={issuesForCurrentTab}
-              onIssueClick={(issue) => setEditingIssue({ issue, isNew: false })}
-              groupByEpic
-            />
-            <WorkLogList issues={issuesForCurrentTab} />
-          </div>
+          <IssuesTab
+            issues={issuesForCurrentTab}
+            selectedSprint={selectedSprint}
+            showAllSprints={issuesShowAllSprints}
+            onToggleShowAllSprints={setIssuesShowAllSprints}
+            onIssueClick={onIssueClick}
+            onAdd={() => openNewIssue()}
+          />
         );
 
       case 'reports':
         return (
-          <div className="space-y-6">
-            <div className="bg-slate-800 bg-opacity-50 border border-slate-700 rounded-xl p-6 backdrop-blur">
-              <h2 className="text-xl font-bold mb-4">エクスポート</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <button
-                  onClick={handleExportMarkdown}
-                  className="px-4 py-3 bg-emerald-700 hover:bg-emerald-600 rounded-lg text-sm flex items-center justify-center gap-2"
-                >
-                  <Download size={16} />
-                  Markdown レポート
-                </button>
-                <button
-                  onClick={handleExportCsv}
-                  className="px-4 py-3 bg-emerald-700 hover:bg-emerald-600 rounded-lg text-sm flex items-center justify-center gap-2"
-                >
-                  <Download size={16} />
-                  CSV（課題一覧）
-                </button>
-                <button
-                  onClick={handleExportJson}
-                  className="px-4 py-3 bg-emerald-700 hover:bg-emerald-600 rounded-lg text-sm flex items-center justify-center gap-2"
-                >
-                  <Download size={16} />
-                  JSON（全スプリント）
-                </button>
-              </div>
-            </div>
-            <VelocityChart data={velocityData} />
-            <AssigneeTable data={assigneeData} issues={filteredIssues} />
-            <EstimateAccuracyChart data={accuracyData} />
-            <div className="bg-slate-800 bg-opacity-50 border border-slate-700 rounded-xl p-6 backdrop-blur">
-              <h2 className="text-lg font-bold mb-2">サマリー</h2>
-              <p className="text-slate-200 leading-relaxed">{summary}</p>
-            </div>
-          </div>
+          <ReportsTab
+            velocityData={velocityData}
+            assigneeData={assigneeData}
+            accuracyData={accuracyData}
+            filteredIssues={filteredIssues}
+            summary={summary}
+            onExportMarkdown={handleExportMarkdown}
+            onExportCsv={handleExportCsv}
+            onExportJson={handleExportJson}
+          />
         );
     }
   };
@@ -668,7 +623,13 @@ export function Dashboard(props: Props) {
           labels={allLabels}
         />
 
-        {renderTab()}
+        <Suspense
+          fallback={
+            <div className="text-center text-slate-400 text-sm py-12">読み込み中…</div>
+          }
+        >
+          {renderTab()}
+        </Suspense>
 
         <footer className="mt-10 text-center text-slate-500 text-xs">
           Velocity Dashboard · {new Date().getFullYear()}

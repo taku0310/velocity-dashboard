@@ -45,13 +45,13 @@
 - [x] **PR-γ2**: ガント「今日に移動」ボタン + 初回マウントの自動スクロール
 - [x] **PR-γ3**: 編集モーダルに「詳細を表示」折りたたみ
 
-### Sprint δ — 内部リファクタ (3 日、並行可)
+### Sprint δ — 内部リファクタ ✅ 完了 (commit `<next>`)
 
-- [ ] **PR-R1**: ESLint `import/no-restricted-paths` 追加 + `lib/` 確立 (0.3 日) ※ α1 と重複可
-- [ ] **PR-R2-R8**: `features/<name>/` への切り出し（auth / summary / progress / gantt / issues / reports） (1.5 日)
-- [ ] **PR-R9**: TanStack Query 導入、`useSprintData` 置換 (0.8 日)
-- [ ] **PR-R10**: Zustand 導入、Dashboard.tsx の useState 移行 (0.5 日)
-- [ ] **PR-R11**: バンドル分割 (lazy + manualChunks) (0.3 日)
+- [x] **PR-R1**: `lib/` 確立（PR-α1 で実施済）
+- [x] **PR-R2-R8**: 5 タブをそれぞれ `src/features/<name>/<Name>Tab.tsx` に切り出し
+- [ ] **PR-R9**: TanStack Query 導入（v1.1 で実 Jira バックエンド統合時にまとめて）
+- [ ] **PR-R10**: Zustand 導入（v1.1 で）
+- [x] **PR-R11**: `vite.config.ts` で manualChunks（react / recharts / icons 分離）+ 各タブを `React.lazy()` で動的読み込み
 
 ### Sprint ε — テスト基盤 (1 日)
 
